@@ -28,15 +28,18 @@ def load_dataset(test_sen=None):
     
     tokenize = lambda x: x.split()
     TEXT = data.Field(sequential=True, tokenize=tokenize, lower=True, include_lengths=True, batch_first=True, fix_length=200)
-    LABEL = data.LabelField(tensor_type=torch.FloatTensor)
-    train_data, test_data = datasets.IMDB.splits(TEXT, LABEL)
-    TEXT.build_vocab(train_data, vectors=GloVe(name='6B', dim=300))
-    LABEL.build_vocab(train_data)
+    LABEL = data.LabelField(dtype=float)
+    train_data, test_data = data.TabularDataset.splits(path='.'
+                                        , train='summary_non_zero_train.tsv'
+                                        , test='summary_non_zero_test.tsv'
+                                        , format='tsv'
+                                        , fields=[('summary', TEXT)
+                                        , ('review_scores_rating', LABEL)]) 
+    TEXT.build_vocab(train_data, vectors=GloVe(name='6B', dim=300), min_freq=2)
 
     word_embeddings = TEXT.vocab.vectors
     print ("Length of Text Vocabulary: " + str(len(TEXT.vocab)))
     print ("Vector size of Text Vocabulary: ", TEXT.vocab.vectors.size())
-    print ("Label Length: " + str(len(LABEL.vocab)))
 
     train_data, valid_data = train_data.split() # Further splitting of training_data to create new training_data & validation_data
     train_iter, valid_iter, test_iter = data.BucketIterator.splits((train_data, valid_data, test_data), batch_size=32, sort_key=lambda x: len(x.text), repeat=False, shuffle=True)
